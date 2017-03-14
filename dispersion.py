@@ -148,7 +148,7 @@ for fileName in fileNames:
         print('Z0=' + str(Z0))
 
 
-        if True:
+        if False:
           f, axarr = plt.subplots(5, sharex=True, figsize=(20, 10))
 
           axarr[0].set_title(
@@ -206,10 +206,17 @@ x = np.array([0, 20.657, 32.947, 46.544, 65.981, 92.46, 104, 131, 147, 161, 168,
 y = np.array([182, 180, 176, 168.9, 154, 125.8, 111, 72.3, 48.7, 30.3, 21.31, 13.23, 7.334, 3.234, 2.109, 1.5])/(-181)
 
 plt.plot(x, y)
+plt.plot(x, np.array(y) - 0.05)
+
+print(x)
+print(np.array(y) - 0.05)
 
 # plt.show()
 
 
 #   plt.plot(Ps, Zs)
 plt.plot(Ps, Es, '-o')
+plt.plot(Ps, Es, '-o')
+
 plt.show()
+

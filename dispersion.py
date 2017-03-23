@@ -7,11 +7,9 @@ from scipy.odr import *
 import numbers
 
 import warnings
-warnings.filterwarnings(action="ignore", module="scipy", message="^internal gelsd")
 warnings.filterwarnings(action="ignore", module="matplotlib", message="^tight_layout")
 
-fileNames = ['a=1 N=30B t=80/*', 'a=1 N=30B t=50/*', 'a=1 N=50B/*']
-# fileNames = ['a=1 N=50B/*']
+fileNames = ['a=1 N=200 t=80 p=0->1.8/*', 'a=1 N=30B t=50 p=0->1.8/*', 'a=1 N=50B t=50 p=1.9->2.5/*', 'detailed balance/*']
 for fileName in fileNames:
   paths = glob.glob('./data/' + fileName + '.txt', recursive=True)
 
@@ -93,70 +91,65 @@ for fileName in fileNames:
       if passed:
 
 
-
         # find first zero in G and cut
         try:
           makeFinite = G.index(0)
         except ValueError:
           makeFinite = len(G)
 
-
         T = np.array(T)
         G = np.array(G)
-
 
         t = np.array(T[:makeFinite])
         g = np.array(G[:makeFinite])
 
+        upperBound = makeFinite - 1
 
-        logG = sig.savgol_filter(np.log(g), 51, 3)
-        diffLogG = sig.savgol_filter(np.diff(logG), 51, 3)/(2*T[0])
-
-        # lower bound
+        Z = 1
+        E = 0
         lowerBound = 0
-        interval = 200
-        for i, val in enumerate(diffLogG):
-          found = True
-          if i + interval <= diffLogG.size - 1:
-            for j in range(i + 1, i + 1 + interval):
-              if diffLogG[i] < diffLogG[j]:
-                found = False
+        fittingData = True
+        while fittingData:
 
-          if found:
-            lowerBound = i
-            break
+          # Define a function (quadratic in our case) to fit the data with.
+          def exp_fit(params, t):
+            Z, E = params
+            return Z*np.exp(-(E - parameters['mu'])*t)
 
-        
-        upperBound = makeFinite - lowerBound - 250
+          # Create a model for fitting.
+          exp_model = Model(exp_fit)
 
+          # Create a RealData object using our initiated data from above.
+          data = RealData(t[lowerBound:], g[lowerBound:])
 
+          # Set up ODR with the model and data.
+          odr = ODR(data, exp_model, beta0=[Z, E])
 
+          # Run the regression.
+          out = odr.run()
 
+          Z = out.beta[0]
+          E = out.beta[1]
 
+          g_fit = Z*np.exp(-(E - parameters['mu'])*t)
 
-        # Define a function (quadratic in our case) to fit the data with.
-        def exp_fit(params, t):
-          Z, E = params
-          return Z*np.exp(-(E - parameters['mu'])*t)
+          # find intersection
+          signs = np.sign(g[lowerBound:] - g_fit[lowerBound:])
+          firstSign = signs[0]
+          for i, s in enumerate(signs):
+            if s != firstSign:
+              if i > 1:
+                lowerBound += i;
+                break
+              else:
+                fittingData = False
+                break
 
-        # Create a model for fitting.
-        exp_model = Model(exp_fit)
-
-        # Create a RealData object using our initiated data from above.
-        data = RealData(T[lowerBound:lowerBound+upperBound], G[lowerBound:lowerBound+upperBound])
-
-        # Set up ODR with the model and data.
-        odr = ODR(data, exp_model, beta0=[1, 0])
-
-        # Run the regression.
-        out = odr.run()
-
-        Z = out.beta[0]
-        E = out.beta[1]
+            if i == signs.size:
+              fittingData = False
 
         Z_err = out.sd_beta[0]
         E_err = out.sd_beta[1]
-
 
         Ps.append(parameters['p'])
         Es.append(E)
@@ -176,7 +169,7 @@ for fileName in fileNames:
           f, axarr = plt.subplots(3, sharex=True, figsize=(20, 10))
 
           axarr[0].set_title(
-            r'$p = {0}, \, \alpha = {1}, \, \mu = {2}, \, N = {3} \, E = {4}, \, Z = {5}$'.format(
+            r'$p = {0}, \, \alpha = {1}, \, \mu = {2}, \, N = {3}, \, E_0 = {4}, \, Z_0 = {5}$'.format(
               parameters['p'],
               parameters['a'],
               parameters['mu'],
@@ -188,46 +181,49 @@ for fileName in fileNames:
 
           axarr[0].plot(T, G)
           axarr[0].plot(T[lowerBound], G[lowerBound], 'o', color='green')
-          axarr[0].plot(T, Z*np.exp(-(E - parameters['mu'])*T), '--', color='#ff00ee')
-          axarr[0].plot(T[upperBound + lowerBound], G[upperBound + lowerBound], 'o', color='green')
+          axarr[0].plot(T, Z*np.exp(-(E - parameters['mu'])*T), '--', color='red')
+          axarr[0].plot(T[upperBound], G[upperBound], 'o', color='green')
+          axarr[0].set_xlabel(r'$\tau$')
+          axarr[0].set_ylabel(r'$G$')
 
+          axarr[1].semilogy(T, G)
+          axarr[1].semilogy(T[lowerBound], G[lowerBound], 'o', color='green')
+          axarr[1].semilogy(T, Z*np.exp(-(E - parameters['mu'])*T), '--', color='red')
+          axarr[1].semilogy(T[upperBound], G[upperBound], 'o', color='green')
+          axarr[1].set_xlabel(r'$\tau$')
+          axarr[1].set_ylabel(r'$\log G$')
 
-          axarr[1].plot(t, np.log(g))
-          axarr[1].plot(t, logG, '--', color='orange')
-          axarr[1].plot(T[lowerBound], logG[lowerBound], 'o', color='green')
-          axarr[1].plot(T[upperBound + lowerBound], logG[upperBound + lowerBound], 'o', color='green')
-          axarr[1].plot(T, np.log(Z) - (E - parameters['mu'])*T, '--', color='#ff00ee')
-
-
-          axarr[2].plot(t[0: -1], np.diff(logG, n=1)/(2*T[0]))
-          axarr[2].plot(t[0: -1], diffLogG, 'orange')
-          axarr[2].plot(T[lowerBound], diffLogG[lowerBound], 'o', color='green')
-          axarr[2].plot(T[upperBound + lowerBound], diffLogG[upperBound + lowerBound], 'o', color='green')
-          axarr[2].plot(T, - (E - parameters['mu']) + T*0, '--', color='#ff00ee')
+          axarr[2].plot(t[lowerBound:], g[lowerBound:] - g_fit[lowerBound:])
+          axarr[2].plot(t[lowerBound:], np.zeros(t.size - lowerBound), color='red')
+          axarr[2].set_xlabel(r'$\tau$')
+          axarr[2].set_ylabel(r'$G - G_{\mathrm{fit}}$')
 
           plt.tight_layout()
           plt.show()
 
-        # plt.plot(parameters['a'], E0, '*')
-
 
   # plt.plot(Ps, Es)
 
-  plt.plot(Ps, Es, '-')
-  plt.errorbar(Ps, Es, yerr=Es_err, linestyle='None', marker='x')
+  # plt.plot(Ps, Es, '-')
+  plt.errorbar(Ps, Es, yerr=Es_err, marker='x', label='My result')
 
 
 x = np.array([0, 20.657, 32.947, 46.544, 65.981, 92.46, 104, 131, 147, 161, 168, 174, 180, 186, 189, 192])/104
-y = np.array([182, 180, 176, 168.9, 154, 125.8, 111, 72.3, 48.7, 30.3, 21.31, 13.23, 7.334, 3.234, 2.109, 1.5])/(-181)
+y = np.array([182.7, 180, 176, 168.9, 154, 125.8, 111, 72.3, 48.7, 30.3, 21.31, 13.23, 7.334, 3.234, 2.109, 1.5])/(-181)
 
-plt.plot(x, y, ':')
+plt.plot(x, y, '--', color='black', lw=2, label='Your result')
+plt.title(r'$\alpha = {0}$'.format(parameters['a']))
+plt.xlabel(r'$p$')
+plt.ylabel(r'$E_0(p)$')
+plt.legend(loc=4)
+
+plt.xlim(1.75, 2.05)
+plt.ylim(-0.04, 0.03)
+
 
 
 #   plt.plot(Ps, Zs)
 
-# print(Es_err)
-
-plt.errorbar(Ps, Es, yerr=Es_err, linestyle='None', marker='x')
 
 plt.savefig('plots/foo.pdf')
 plt.show()

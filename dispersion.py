@@ -1,4 +1,4 @@
-import glob
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal as sig
@@ -9,14 +9,21 @@ import numbers
 import warnings
 warnings.filterwarnings(action="ignore", module="matplotlib", message="^tight_layout")
 
-fileNames = ['a=1 N=200 t=80 p=0->1.8/*', 'a=1 N=30B t=50 p=0->1.8/*', 'a=1 N=50B t=50 p=1.9->2.5/*', 'detailed balance/*']
-for fileName in fileNames:
-  paths = glob.glob('./data/' + fileName + '.txt', recursive=True)
+folder = 'p=0 a=0->6/'
+# folder = 'a=1 p=0->2.5/'
+
+# used to calculate mean and error bars
+Eall = {'p': {}, 'a': {}}
+Zall = {'p': {}, 'a': {}}
+
+for root, dirs, files in os.walk(os.getcwd() + '/data/' + folder):
+  # filter files to only accept data files (.txt)
+  files = [fi for fi in files if fi.endswith(".txt")]
 
   filters = [
     # {
-    #   'key': 'a',
-    #   'value': 1
+    #   'key': 'p',
+    #   'value': 0
     # }
     # ,{
     #   'key': 'p',
@@ -35,8 +42,8 @@ for fileName in fileNames:
   Zs_err = []
 
 
-  for j, path in enumerate(paths):
-    with open(path) as fp:
+  for j, path in enumerate(files):
+    with open(root + '/' + path) as fp:
 
       T = [];
       G = [];
@@ -158,6 +165,21 @@ for fileName in fileNames:
         Es_err.append(E_err)
         Zs_err.append(Z_err)
 
+        # to calculate mean values and error bars
+        if parameters['p'] in Eall['p'].keys():
+          Eall['p'][parameters['p']] = np.append(Eall['p'][parameters['p']], E)
+          Zall['p'][parameters['p']] = np.append(Zall['p'][parameters['p']], Z)
+        else:
+          Eall['p'][parameters['p']] = np.array([E])
+          Zall['p'][parameters['p']] = np.array([Z])
+
+        if parameters['a'] in Eall['a'].keys():
+          Eall['a'][parameters['a']] = np.append(Eall['a'][parameters['a']], E)
+          Zall['a'][parameters['a']] = np.append(Zall['a'][parameters['a']], Z)
+        else:
+          Eall['a'][parameters['a']] = np.array([E])
+          Zall['a'][parameters['a']] = np.array([Z])
+
         print('-------')
         print('a=' + str(parameters['a']))
         print('p=' + str(parameters['p']))
@@ -199,32 +221,79 @@ for fileName in fileNames:
           axarr[2].set_ylabel(r'$G - G_{\mathrm{fit}}$')
 
           plt.tight_layout()
+          plt.savefig('plots/foo.pdf')
           plt.show()
 
 
-  # plt.plot(Ps, Es)
-
-  # plt.plot(Ps, Es, '-')
-  plt.errorbar(Ps, Es, yerr=Es_err, marker='x', label='My result')
-
-
-x = np.array([0, 20.657, 32.947, 46.544, 65.981, 92.46, 104, 131, 147, 161, 168, 174, 180, 186, 189, 192])/104
-y = np.array([182.7, 180, 176, 168.9, 154, 125.8, 111, 72.3, 48.7, 30.3, 21.31, 13.23, 7.334, 3.234, 2.109, 1.5])/(-181)
-
-plt.plot(x, y, '--', color='black', lw=2, label='Your result')
-plt.title(r'$\alpha = {0}$'.format(parameters['a']))
-plt.xlabel(r'$p$')
-plt.ylabel(r'$E_0(p)$')
-plt.legend(loc=4)
-
-plt.xlim(1.75, 2.05)
-plt.ylim(-0.04, 0.03)
+  # plt.errorbar(Ps, Es, yerr=Es_err, marker='x', label='My result', ls="none")
+  plt.errorbar(As, Es, yerr=Es_err, marker='x', label='My result')
+  # plt.plot(Ps, Zs, '.')
+  # plt.plot(As, Es, '.')
+  # plt.plot(As, Zs, '.')
 
 
+p = np.array([0, 20.657, 32.947, 46.544, 65.981, 92.46, 104, 131, 147, 161, 168, 174, 180, 186, 189, 192])/104
+Ep = np.array([182.7, 180, 176, 168.9, 154, 125.8, 111, 72.3, 48.7, 30.3, 21.31, 13.23, 7.334, 3.234, 2.109, 1.5])/(-181)
 
-#   plt.plot(Ps, Zs)
+a = np.array([0, 2.932, 8.945, 14.915, 29.804, 59.613, 89.362, 119.225, 134.287, 148.998, 178.837])/178.837*6
+Ea = np.array([0, 2.697, 8.158, 13.656, 27.292, 55.575, 85.552, 116.807, 132.381, 149.587, 185.606])/188.337*(-7)
+
+
+# plt.plot(p, Ep, '--', color='black', lw=2, label='Your result')
+plt.plot(a, Ea, ':', marker='.')
+
+meff = 1/(1 - 1/6)
+p = np.linspace(0.001, 1.4, 1000)
+E0second = -1 - 1.26/100 + p**2/(2*meff)
+E0first = 0.5*p**2 - 2**0.5/p * np.arcsin(p*(2**(-0.5)))
+# plt.plot(p, E0second, ':', color='magenta', label=r'$E_0^{(2)}(p)$')
+# plt.plot(p, E0first, ':', color='brown', label=r'$E_0^{(1)}(p)$')
+
+
+# plt.legend(loc=4)
+# plt.xlim(1.70, 1.86)
+# plt.ylim(-0.07, 0)
+# plt.title(r'$\alpha = {0}$'.format(parameters['a']))
+# plt.xlabel(r'$p$')
+# plt.ylabel(r'$E_0(p)$')
+
+# calculate and plot mean and with bars
+
+A = []
+P = []
+meanEofA = []
+stdEofA = []
+meanZofA = []
+stdZofA = []
+meanEofP = []
+stdEofP = []
+meanZofP = []
+stdZofP = []
+
+
+for a in sorted(Eall['a']):
+  A += [a]
+  meanEofA += [np.mean(Eall['a'][a])]
+  stdEofA += [np.std(Eall['a'][a])]
+  meanZofA += [np.mean(Zall['a'][a])]
+  stdZofA += [np.std(Zall['a'][a])]
+
+
+for p in sorted(Eall['p']):
+  P += [p]
+  meanEofP += [np.mean(Eall['p'][p])]
+  stdEofP += [np.std(Eall['p'][p])]
+  meanZofP += [np.mean(Zall['p'][p])]
+  stdZofP += [np.std(Zall['p'][p])]
+
+
+# plt.errorbar(A, meanEofA, yerr=stdEofA, marker='.', linestyle=':', color='magenta')
+# plt.errorbar(A, meanZofA, yerr=stdZofA, marker='.', linestyle=':', color='magenta')
+# plt.errorbar(P, meanEofP, yerr=stdEofP, marker='.', linestyle=':', color='magenta')
+# plt.errorbar(P, meanZofP, yerr=stdZofP, marker='.', linestyle=':', color='magenta')
+
+
 
 
 plt.savefig('plots/foo.pdf')
 plt.show()
-

@@ -1,4 +1,0 @@
-1->2:
-3->5: externalMomentum = fixed
-6->7: update probability (1, 5, 10) 
-8->9: dp=1, pMax=1 to see if they agree with each other

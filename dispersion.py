@@ -9,8 +9,8 @@ import numbers
 import warnings
 warnings.filterwarnings(action="ignore", module="matplotlib", message="^tight_layout")
 
-folder = 'p=0 a=0->6/'
-# folder = 'a=1 p=0->2.5/'
+# folder = 'p=0 a=0->6/'
+folder = 'a=1 p=0->2.5/a=1 N=200B t=80 p=0->1.8'
 
 # used to calculate mean and error bars
 Eall = {'p': {}, 'a': {}}
@@ -224,9 +224,8 @@ for root, dirs, files in os.walk(os.getcwd() + '/data/' + folder):
           plt.savefig('plots/foo.pdf')
           plt.show()
 
-
-  # plt.errorbar(Ps, Es, yerr=Es_err, marker='x', label='My result', ls="none")
-  plt.errorbar(As, Es, yerr=Es_err, marker='x', label='My result')
+  plt.errorbar(Ps, Es, yerr=Es_err, marker='x', label='My result', ls="none")
+  # plt.errorbar(As, Es, yerr=Es_err, marker='x', label='My result')
   # plt.plot(Ps, Zs, '.')
   # plt.plot(As, Es, '.')
   # plt.plot(As, Zs, '.')
@@ -240,7 +239,7 @@ Ea = np.array([0, 2.697, 8.158, 13.656, 27.292, 55.575, 85.552, 116.807, 132.381
 
 
 # plt.plot(p, Ep, '--', color='black', lw=2, label='Your result')
-plt.plot(a, Ea, ':', marker='.')
+# plt.plot(a, Ea, ':', marker='.')
 
 meff = 1/(1 - 1/6)
 p = np.linspace(0.001, 1.4, 1000)
@@ -289,10 +288,12 @@ for p in sorted(Eall['p']):
 
 # plt.errorbar(A, meanEofA, yerr=stdEofA, marker='.', linestyle=':', color='magenta')
 # plt.errorbar(A, meanZofA, yerr=stdZofA, marker='.', linestyle=':', color='magenta')
-# plt.errorbar(P, meanEofP, yerr=stdEofP, marker='.', linestyle=':', color='magenta')
+plt.errorbar(P, meanEofP, yerr=stdEofP, marker='.', linestyle=':', color='magenta')
 # plt.errorbar(P, meanZofP, yerr=stdZofP, marker='.', linestyle=':', color='magenta')
 
 
+print(P)
+print(meanEofP)
 
 
 plt.savefig('plots/foo.pdf')

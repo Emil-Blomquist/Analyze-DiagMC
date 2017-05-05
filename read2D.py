@@ -27,31 +27,6 @@ def read2D (path):
           if not any(char in value for char in stringCharacters):
             parameters[key] = float(parameters[key])
 
-      # elif i == 1:
-      #   # useful quantities
-      #   Np = int(round(parameters['pmax']/parameters['dp']))
-      #   Nt = int(round(parameters['tmax']/parameters['dt']))
-      #   dp = parameters['dp']
-      #   dt = parameters['dt']
-      #   ps = np.linspace(0, parameters['pmax'] - dp, Np) + 0.5*dp
-      #   ts = np.linspace(0, parameters['tmax'] - dt, Nt) + 0.5*dt
-
-      #   # used for plotting
-      #   Ts = np.tile(ts, (Np, 1))
-      #   Ps = np.tile(np.array([ps]).transpose(), (1, Nt))
-
-      #   # sum over all G0s, but no integration
-      #   sumG0 = 0
-      #   for p in ps:
-      #     for t in ts:
-      #       sumG0 += np.exp(-(0.5*p**2 - parameters['mu'])*t)
-
-      #   # counts corresponding to G0
-      #   N0 = float(line.split('\n')[0])
-
-      #   # G0 = c H0, sum(H0) = N0 =>
-      #   scaleFactor = sumG0/N0
-
       else:
         if i == 1:
           # useful quantities
@@ -74,6 +49,6 @@ def read2D (path):
         line = line.split(' ')
 
         # H[i - 2, :] = [float(part)*scaleFactor for part in line]
-        H[i - 2, :] = [float(part) for part in line]
+        H[i - 1, :] = [float(part) for part in line]
         
   return Ts, Ps, H, parameters
